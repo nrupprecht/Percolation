@@ -7,6 +7,7 @@ int main(int argc, char** argv) {
   float probability = 0.4;
   int width = 100;
   int height = 100;
+  int size = -1;
   bool bmp = true;
 
   // Seed rand
@@ -17,6 +18,7 @@ int main(int argc, char** argv) {
   parser.get("prob", probability);
   parser.get("width", width);
   parser.get("height", height);
+  parser.get("size", size);
   parser.get("bmp", bmp);
   // Check for illegal tokens
   try {
@@ -30,6 +32,7 @@ int main(int argc, char** argv) {
   // Create percolation
   Percolation percolation;
   percolation.setProbability(probability);
+  if (size>0) width = height = size;
   percolation.setDims(width, height);
   percolation.setDoBMP(bmp);
   // Do the percolation
