@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
   percolation.percolate();
   
   //percolation.siftLargest();
-  //  percolation.getBorder();
+  percolation.getBorder();
 
   // Print how long it took
   cout << "Time: " << percolation.getTime() << endl;

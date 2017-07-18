@@ -26,7 +26,7 @@ void Percolation::percolate() {
 
 void Percolation::createImage() {
   // Create array of random colors
-  vector<int> colors(numClusters);
+  vector<int> colors(numClusters+1);
   for (auto &c : colors) {
     int r = 200*drand48()+55, g=200*drand48()+55, b=200*drand48()+55;
     c = 256*256*r+256*g+b;
@@ -35,9 +35,10 @@ void Percolation::createImage() {
   image.SetSize(width, height);
   // Create a lambda for fetching a pixel color
   auto getColor = [&] (int i) {
-    int R = colors.at(i) % 256;
-    int G = (colors.at(i)/256) % 256;
-    int B = colors.at(i)/(256*256);
+    int c = colors.at(i);
+    int R = c % 256;
+    int G = (c/256) % 256;
+    int B = c/(256*256);
     return RGBApixel(R, G, B);
   };
   // Set the image colors
@@ -73,8 +74,10 @@ void Percolation::getBorder() {
     }
   // Unite regions
   unite();
+  // Exchange head numbers for cluster numbers
+  cluster();
   // Extract the largest cluster
-  // siftLargest();
+  siftLargest();
 }
 
 double Percolation::getAveClusterSize() {
