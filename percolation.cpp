@@ -221,10 +221,8 @@ inline void Percolation::cluster() {
   for (int y=0; y<height; ++y)
     for (int x=0; x<width; ++x) {
       int head = lattice[y*width+x];
-      if (head<0) { // Skip over index == -1
-        if (doBMP) image.SetPixel(x, y, RGBApixel(0,0,0));
-        continue;
-      }
+// Skip over index == -1
+      if (head<0) continue;
       auto iter = dictionary.find(head);
       // First time encountering this cluster #
       if (iter==dictionary.end()) {
