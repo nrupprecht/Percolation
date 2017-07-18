@@ -65,12 +65,22 @@ void Percolation::siftLargest() {
 void Percolation::getBorder() {
   // Remove all clusters except the largest
   siftLargest();
+  // Initialization
+  if (lattice[0]==-1) lattice[0]=1;
   // Remove largest cluster
-  for (int y=0; y<height; ++y)
+  for (int y=height; y>0; --y)
     for (int x=0; x<width; ++x) {
       int cluster = lattice[y*width+x];
-      if (cluster<0) lattice[y*width+x] = y*width+x+1;
-      else           lattice[y*width+x] = -1;
+      if (cluster<0) {
+	// Do some early clustering so unite takes less time
+	if (x>0 && lattice[y*width+x-1]>0) 
+	  lattice[y*width+x] = lattice[y*width+x-1];
+	else if (y<height && lattice[(y+1)*width+x]>0) 
+	  lattice[y*width+x] = lattice[(y+1)*width+x];
+	else
+	  lattice[y*width+x] = y*width+x+1;
+      }
+      else lattice[y*width+x] = -1;
     }
   // Unite regions
   unite();
@@ -159,7 +169,7 @@ void Percolation::sitePercolation() {
     }
   // Count the number of clusters
   numClusters = clusters;
-  */
+
   // Get the size distribution
   sizeDistribution.clear(); // { Cluster size, number of such clusters }
   auto end = sizeDistribution.end();
@@ -172,6 +182,7 @@ void Percolation::sitePercolation() {
   // Find largest cluster sizes
   if (!sizeDistribution.empty()) maxCluster = sizeDistribution.rbegin()->first;
   else maxCluster = 0;
+  */
 }
 
 void Percolation::bondPercolation() {
@@ -245,6 +256,17 @@ inline void Percolation::cluster() {
     }
   // Count the number of clusters
   numClusters = clusters;
+  // Get the size distribution
+  sizeDistribution.clear(); // { Cluster size, number of such clusters }
+  auto end = sizeDistribution.end();
+  for (const auto size : sizeRecord) {
+    auto iter = sizeDistribution.find(size);
+    if (iter!=end) ++iter->second;
+    else sizeDistribution.insert(pair<int,int>(size,1));
+  }
+  // Find largest cluster sizes
+  if (!sizeDistribution.empty()) maxCluster = sizeDistribution.rbegin()->first;
+  else maxCluster = 0;
 }
 
 inline int Percolation::getHead(int index) {
