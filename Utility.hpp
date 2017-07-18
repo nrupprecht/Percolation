@@ -16,6 +16,9 @@ using std::ofstream;
 #include <string>
 using std::string;
 
+#include <map>
+using std::map;
+
 template<typename T> void writeToFile(string filename, const vector<T>& lst) {
   // Open filestream
   ofstream fout(filename);
@@ -53,6 +56,14 @@ template<typename T> inline std::ostream& operator<<(std::ostream& out, const st
   }
   out << "}";
   return out;
+}
+
+template<typename T> T min(T a, T b) {
+  return a<b ? a : b;
+}
+
+template<typename T> T max(T a, T b) {
+  return a<b ? b : a;
 }
 
 #endif // __UTILITY_PERCOLATION_HPP

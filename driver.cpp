@@ -1,7 +1,6 @@
 // 7/13/2017
 
 #include "percolation.hpp"
-#include "Utility.hpp"
 
 int main(int argc, char** argv) {
   float probability = 0.4;
@@ -9,6 +8,9 @@ int main(int argc, char** argv) {
   int height = 100;
   int size = -1;
   bool bmp = true;
+  bool transition = false;
+  double pmin = 0;
+  double pmax = 1;
 
   // Seed rand
   srand48( std::time(0) );
@@ -20,6 +22,9 @@ int main(int argc, char** argv) {
   parser.get("height", height);
   parser.get("size", size);
   parser.get("bmp", bmp);
+  parser.get("transition", transition);
+  parser.get("pmin", pmin);
+  parser.get("pmax", pmax);
   // Check for illegal tokens
   try {
     parser.check();
@@ -31,12 +36,18 @@ int main(int argc, char** argv) {
 
   // Create percolation
   Percolation percolation;
+  percolation.setTransition(transition);
+  percolation.setPMin(pmin);
+  percolation.setPMax(pmax);
   percolation.setProbability(probability);
   if (size>0) width = height = size;
   percolation.setDims(width, height);
   percolation.setDoBMP(bmp);
   // Do the percolation
   percolation.percolate();
+  
+  //percolation.siftLargest();
+  //  percolation.getBorder();
 
   // Print how long it took
   cout << "Time: " << percolation.getTime() << endl;
@@ -46,6 +57,7 @@ int main(int argc, char** argv) {
 
   // Print the image
   if (bmp) {
+    percolation.createImage();
     BMP &image = percolation.getImage();
     image.WriteToFile("image.bmp");
   }

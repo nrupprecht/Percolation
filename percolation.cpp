@@ -1,8 +1,8 @@
 #include "percolation.hpp"
 
-Percolation::Percolation() : lattice(0), type(SITE), probability(0.5), width(100), height(100), doBMP(true), time(0), maxCluster(0), numClusters(0) {};
+Percolation::Percolation() : lattice(nullptr), type(SITE), transition(false), pmin(0), pmax(1), probability(0.5), width(100), height(100), doBMP(true), time(0), maxCluster(0), numClusters(0) {};
 
-Percolation::Percolation(int w, int h) : lattice(0), type(SITE), probability(0.5), width(w), height(h), doBMP(true), time(0), maxCluster(0), numClusters(0) {};
+Percolation::Percolation(int w, int h) : lattice(nullptr), type(SITE), transition(false), pmin(0), pmax(1), probability(0.5), width(w), height(h), doBMP(true), time(0), maxCluster(0), numClusters(0) {};
 
 Percolation::~Percolation() {
   if (lattice) delete [] lattice;
@@ -22,6 +22,59 @@ void Percolation::percolate() {
   auto end = high_resolution_clock::now();
   duration<double> span = duration_cast<duration<double>>(end-start);
   time = span.count();
+}
+
+void Percolation::createImage() {
+  // Create array of random colors
+  vector<int> colors(numClusters);
+  for (auto &c : colors) {
+    int r = 200*drand48()+55, g=200*drand48()+55, b=200*drand48()+55;
+    c = 256*256*r+256*g+b;
+  }
+  // Set image size
+  image.SetSize(width, height);
+  // Create a lambda for fetching a pixel color
+  auto getColor = [&] (int i) {
+    int R = colors.at(i) % 256;
+    int G = (colors.at(i)/256) % 256;
+    int B = colors.at(i)/(256*256);
+    return RGBApixel(R, G, B);
+  };
+  // Set the image colors
+  for (int y=0; y<height; ++y)
+    for (int x=0; x<width; ++x) {
+      int cluster = lattice[y*width+x];
+      if (cluster<0) image.SetPixel(x, y, RGBApixel(0,0,0));
+      else image.SetPixel(x, y, getColor(cluster)); 
+    }
+}
+
+void Percolation::siftLargest() {
+  // Remove all clusters except the largest
+  for (int y=0; y<height; ++y)
+    for (int x=0; x<width; ++x) {
+      int cluster = lattice[y*width+x];
+      if (cluster<0) continue;
+      if (sizeRecord.at(cluster)!=maxCluster) 
+	lattice[y*width+x]=-1;
+      else lattice[y*width+x]=0; // Set the max cluster to be the zero cluster
+    }
+}
+
+void Percolation::getBorder() {
+  // Remove all clusters except the largest
+  siftLargest();
+  // Remove largest cluster
+  for (int y=0; y<height; ++y)
+    for (int x=0; x<width; ++x) {
+      int cluster = lattice[y*width+x];
+      if (cluster<0) lattice[y*width+x] = y*width+x+1;
+      else           lattice[y*width+x] = -1;
+    }
+  // Unite regions
+  unite();
+  // Extract the largest cluster
+  // siftLargest();
 }
 
 double Percolation::getAveClusterSize() {
@@ -47,31 +100,36 @@ void Percolation::setProbability(float p) {
   probability = p;
 }
 
+void Percolation::setPMin(double p) {
+  pmin = max(0., min(p, 1.));
+}
+
+void Percolation::setPMax(double p) {
+  pmax = min(1., max(p, 0.));
+}
+
 void Percolation::sitePercolation() {
   if (lattice) delete [] lattice;
   // Allocate a new array
   lattice = new int[width*height];
   // Set sites
-  for (int y=0; y<height; ++y)
+  double prob = probability;
+  for (int y=0; y<height; ++y) {
+    if (transition) prob = ((double)y/height*(pmax-pmin)+pmin);
     for (int x=0; x<width; ++x) {
-      if (drand48()<=probability) lattice[y*width+x] = y*width+x;
+      if (drand48()<=prob) lattice[y*width+x] = y*width+x;
       else lattice[y*width+x] = -1;
     }
-  // Group sites
+  }
+  // Group sites together
   unite();
   // Assign cluster numbers
-  if (doBMP) image.SetSize(width, height);
-  vector<int> colors; // Colors for the clusters
-  auto getColor = [&] (int i) {
-    int R = colors.at(i) % 256;
-    int G = (colors.at(i)/256) % 256;
-    int B = colors.at(i)/(256*256);
-    return RGBApixel(R, G, B);
-  };
-  set<int> indices;
+  cluster();
+  /*
   int clusters = 0;
   map<int, int> dictionary; // First int is the head #, second is the cluster #
-  sizeRecord.clear();       // Clear out the size record
+  sizeRecord.clear();
+  // Replace head numbers with cluster numbers
   for (int y=0; y<height; ++y)
     for (int x=0; x<width; ++x) {
       int head = lattice[y*width+x];
@@ -80,23 +138,25 @@ void Percolation::sitePercolation() {
 	continue; 
       }
       auto iter = dictionary.find(head);
-      if (iter==dictionary.end()) { // First time encountering this cluster #
+      // First time encountering this cluster #
+      if (iter==dictionary.end()) { 
+	// Assign a cluster number
 	dictionary.insert(pair<int,int>(head, clusters));
-	++clusters;
+	lattice[y*width+x] = clusters; 
+	// Create a size entry
 	sizeRecord.push_back(1);
-	if (doBMP) {
-	  colors.push_back((int)(drand48()*256)*65536 + (int)(drand48()*256)*256 + (int)(drand48()*256));
-	  image.SetPixel(x, y, getColor(clusters-1));
-	}
+	// Increment the cluster number
+	++clusters;
       }
-      else { // The cluster # for the head # is iter->second
+      // Not the first time, the cluster # for the head # is iter->second
+      else {
 	lattice[y*width+x] = iter->second;
 	++sizeRecord.at(iter->second);
-	if (doBMP) image.SetPixel(x, y, getColor(iter->second));
       }
     }
-  // Record number of clusters
-  numClusters = sizeRecord.size();
+  // Count the number of clusters
+  numClusters = clusters;
+  */
   // Get the size distribution
   sizeDistribution.clear(); // { Cluster size, number of such clusters }
   auto end = sizeDistribution.end();
@@ -105,8 +165,10 @@ void Percolation::sitePercolation() {
     if (iter!=end) ++iter->second;
     else sizeDistribution.insert(pair<int,int>(size,1));
   }
+  
   // Find largest cluster sizes
-  maxCluster = sizeDistribution.rbegin()->first;
+  if (!sizeDistribution.empty()) maxCluster = sizeDistribution.rbegin()->first;
+  else maxCluster = 0;
 }
 
 void Percolation::bondPercolation() {
@@ -149,6 +211,39 @@ inline void Percolation::unite() {
   for (int y=0; y<height; ++y)
     for (int x=0; x<width; ++x)
       lattice[y*width+x] = getHead(lattice[y*width+x]);
+}
+
+inline void Percolation::cluster() {
+  int clusters = 0;
+  map<int, int> dictionary; // First int is the head #, second is the cluster #
+  sizeRecord.clear();
+  // Replace head numbers with cluster numbers
+  for (int y=0; y<height; ++y)
+    for (int x=0; x<width; ++x) {
+      int head = lattice[y*width+x];
+      if (head<0) { // Skip over index == -1
+        if (doBMP) image.SetPixel(x, y, RGBApixel(0,0,0));
+        continue;
+      }
+      auto iter = dictionary.find(head);
+      // First time encountering this cluster #
+      if (iter==dictionary.end()) {
+        // Assign a cluster number
+        dictionary.insert(pair<int,int>(head, clusters));
+        lattice[y*width+x] = clusters;
+        // Create a size entry
+        sizeRecord.push_back(1);
+        // Increment the cluster number
+        ++clusters;
+      }
+      // Not the first time, the cluster # for the head # is iter->second
+      else {
+        lattice[y*width+x] = iter->second;
+        ++sizeRecord.at(iter->second);
+      }
+    }
+  // Count the number of clusters
+  numClusters = clusters;
 }
 
 inline int Percolation::getHead(int index) {

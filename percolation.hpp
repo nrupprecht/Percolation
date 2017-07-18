@@ -3,6 +3,8 @@
 
 #include "EasyBMP/EasyBMP.h"
 
+#include "Utility.hpp"
+
 #include <chrono>
 using std::chrono::high_resolution_clock;
 using std::chrono::duration;
@@ -35,7 +37,13 @@ public:
   // Commands
   void percolate();
 
+  // Data processing
+  void createImage();
+  void siftLargest();
+  void getBorder();
+
   // Accessors
+  double getProbability() { return probability; }
   BMP& getImage() { return image; }
   vector<int>& getSizeRecord() { return sizeRecord; }
   map<int, int>& getSizeDistribution() { return sizeDistribution; }
@@ -49,29 +57,35 @@ public:
   void setDims(int, int);
   void setProbability(float);
   void setDoBMP(bool b) { doBMP = b; }
+  void setTransition(bool t) { transition = t; }
+  void setPMin(double);
+  void setPMax(double);
 
 private:
   // Private helper functions
   void sitePercolation();
   void bondPercolation();
   inline void unite();
+  inline void cluster();
   inline int getHead(int);
 
   int *lattice;
 
   PType type;
+  bool transition;
+  double pmin, pmax;
   float probability;
   int width, height;
 
   BMP image;
   bool doBMP;
 
-  vector<int> sizeRecord;
-  map<int, int> sizeDistribution;
+  // Statistics and data
+  vector<int> sizeRecord;         // Size, indexed by cluster number
+  map<int, int> sizeDistribution; // Cluster size vs. # clusters
+  int maxCluster, numClusters;
 
   double time;
-
-  int maxCluster, numClusters;
 };
 
 #endif // __PERCOLATION_HPP__

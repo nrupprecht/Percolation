@@ -1,7 +1,6 @@
 // 7/13/2017
 
 #include "percolation.hpp"
-#include "Utility.hpp"
 
 int main(int argc, char** argv) {
   // Parameters
@@ -57,6 +56,9 @@ int main(int argc, char** argv) {
   cout << "maxCluster=" << maxPercent << ";\n";
   cout << "aveCluster=" << aveCluster << ";\n";
   cout << "aveFiniteCluster=" << aveFiniteCluster << ";\n";
+  cout << "ListLinePlot[maxCluster]\n";
+  cout << "ListLinePlot[aveCluster]\n";
+  cout << "ListLinePlot[aveFiniteCluster]\n";
 
   return 0;
 }
