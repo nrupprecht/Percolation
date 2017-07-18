@@ -63,12 +63,13 @@ void Percolation::siftLargest() {
 }
 
 void Percolation::getBorder() {
+  if (lattice==nullptr) return;
   // Remove all clusters except the largest
   siftLargest();
   // Initialization
   if (lattice[0]==-1) lattice[0]=1;
   // Remove largest cluster
-  for (int y=height; y>0; --y)
+  for (int y=height-1; y>0; --y)
     for (int x=0; x<width; ++x) {
       int cluster = lattice[y*width+x];
       if (cluster<0) {
