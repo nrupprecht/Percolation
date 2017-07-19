@@ -36,11 +36,14 @@ public:
 
   // Commands
   void percolate();
+  void percolate(PType);
 
   // Data processing
   void createImage();
   void siftLargest();
   void getBorder();
+  int  countSites();
+  int  countEdges();
 
   // Accessors
   double getProbability() { return probability; }
@@ -49,7 +52,7 @@ public:
   map<int, int>& getSizeDistribution() { return sizeDistribution; }
   double getTime() { return time; }
   int getMaxCluster() { return maxCluster; }
-  double getMaxPercent() { return (double)maxCluster/(probability*width*height); }
+  double getMaxPercent();
   double getAveClusterSize();
   double getAveFiniteClusterSize();
 
@@ -68,6 +71,7 @@ private:
   inline void unite();
   inline void cluster();
   inline int getHead(int);
+  inline int& latAt(int, int);
 
   int *lattice;
 

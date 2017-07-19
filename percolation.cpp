@@ -9,8 +9,12 @@ Percolation::~Percolation() {
 }
 
 void Percolation::percolate() {
+  percolate(type);
+}
+
+void Percolation::percolate(PType t) {
   auto start = high_resolution_clock::now();
-  switch (type) {
+  switch (t) {
   default:
   case SITE:
     sitePercolation();
@@ -26,7 +30,7 @@ void Percolation::percolate() {
 
 void Percolation::createImage() {
   // Create array of random colors
-  vector<int> colors(numClusters+1);
+  vector<int> colors(numClusters);
   for (auto &c : colors) {
     int r = 200*drand48()+55, g=200*drand48()+55, b=200*drand48()+55;
     c = 256*256*r+256*g+b;
@@ -63,13 +67,12 @@ void Percolation::siftLargest() {
 }
 
 void Percolation::getBorder() {
-  if (lattice==nullptr) return;
+  // Do a percolation
+  percolate(SITE);
   // Remove all clusters except the largest
   siftLargest();
-  // Initialization
-  if (lattice[0]==-1) lattice[0]=1;
   // Remove largest cluster
-  for (int y=height-1; y>0; --y)
+  for (int y=height-1; y>=0; --y)
     for (int x=0; x<width; ++x) {
       int cluster = lattice[y*width+x];
       if (cluster<0) {
@@ -89,6 +92,31 @@ void Percolation::getBorder() {
   cluster();
   // Extract the largest cluster
   siftLargest();
+}
+
+int Percolation::countSites() {
+  int sites = 0;
+  for (int y=0; y<height; ++y)
+    for (int x=0; x<width; ++x)
+      if (latAt(x,y)>-1) ++sites;
+  return sites;
+}
+
+int Percolation::countEdges() {
+  int edges = 0;
+  for (int y=0; y<height; ++y)
+    for (int x=0; x<width; ++x) {
+      int L = latAt(x,y);
+      if (0<x && latAt(x-1,y)!=L)       ++edges;
+      if (x<width-1 && latAt(x+1,y)!=L) ++edges;
+      if (0<y && latAt(x,y-1)!=L)       ++edges;
+      if (y<height-1 && latAt(x,y+1))   ++edges;
+    }
+  return edges/2;
+}
+
+double Percolation::getMaxPercent() {
+  return (double)maxCluster / countSites();
 }
 
 double Percolation::getAveClusterSize() {
@@ -123,8 +151,8 @@ void Percolation::setPMax(double p) {
 }
 
 void Percolation::sitePercolation() {
-  if (lattice) delete [] lattice;
   // Allocate a new array
+  if (lattice) delete [] lattice;
   lattice = new int[width*height];
   // Set sites
   double prob = probability;
@@ -139,55 +167,10 @@ void Percolation::sitePercolation() {
   unite();
   // Assign cluster numbers
   cluster();
-  /*
-  int clusters = 0;
-  map<int, int> dictionary; // First int is the head #, second is the cluster #
-  sizeRecord.clear();
-  // Replace head numbers with cluster numbers
-  for (int y=0; y<height; ++y)
-    for (int x=0; x<width; ++x) {
-      int head = lattice[y*width+x];
-      if (head<0) { // Skip over index == -1
-	if (doBMP) image.SetPixel(x, y, RGBApixel(0,0,0));
-	continue; 
-      }
-      auto iter = dictionary.find(head);
-      // First time encountering this cluster #
-      if (iter==dictionary.end()) { 
-	// Assign a cluster number
-	dictionary.insert(pair<int,int>(head, clusters));
-	lattice[y*width+x] = clusters; 
-	// Create a size entry
-	sizeRecord.push_back(1);
-	// Increment the cluster number
-	++clusters;
-      }
-      // Not the first time, the cluster # for the head # is iter->second
-      else {
-	lattice[y*width+x] = iter->second;
-	++sizeRecord.at(iter->second);
-      }
-    }
-  // Count the number of clusters
-  numClusters = clusters;
-
-  // Get the size distribution
-  sizeDistribution.clear(); // { Cluster size, number of such clusters }
-  auto end = sizeDistribution.end();
-  for (const auto size : sizeRecord) {
-    auto iter = sizeDistribution.find(size);
-    if (iter!=end) ++iter->second;
-    else sizeDistribution.insert(pair<int,int>(size,1));
-  }
-  
-  // Find largest cluster sizes
-  if (!sizeDistribution.empty()) maxCluster = sizeDistribution.rbegin()->first;
-  else maxCluster = 0;
-  */
 }
 
 void Percolation::bondPercolation() {
-
+  
 }
 
 inline void Percolation::unite() { 
@@ -274,4 +257,8 @@ inline int Percolation::getHead(int index) {
   if (index<0) return -1;
   while (lattice[index]!=index && -1<lattice[index]) index = lattice[index];
   return index;
+}
+
+inline int& Percolation::latAt(int x, int y) {
+  return lattice[y*width+x];
 }
